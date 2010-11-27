@@ -1,0 +1,56 @@
+// Copyright 2010 The Govt Authors.  All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+package vtclnt
+
+import (
+	"fmt"
+	"io"
+	"http"
+	"govt.googlecode.com/hg/vt"
+)
+
+func (clnt *Clnt) ServeHTTP(c http.ResponseWriter, r *http.Request) {
+	io.WriteString(c, fmt.Sprintf("<html><body><h1>Client %s</h1>", clnt.Id))
+	defer io.WriteString(c, "</body></html>")
+
+	// fcalls
+	if clnt.Debuglevel&DbgLogCalls != 0 {
+		fs := clnt.Log.Filter(clnt, DbgLogCalls)
+		io.WriteString(c, fmt.Sprintf("<h2>Last %d Venti messages</h2>", len(fs)))
+		for _, l := range fs {
+			fc := l.Data.(*vt.Call)
+			if fc.Id != 0 {
+				io.WriteString(c, fmt.Sprintf("<br>%s", fc))
+			}
+		}
+	}
+}
+
+func clntServeHTTP(c http.ResponseWriter, r *http.Request) {
+	io.WriteString(c, fmt.Sprintf("<html><body>"))
+	defer io.WriteString(c, "</body></html>")
+
+	clntLock.Lock()
+	if clntList == nil {
+		io.WriteString(c, "no clients")
+	}
+
+	for clnt := clntList; clnt != nil; clnt = clnt.next {
+		io.WriteString(c, fmt.Sprintf("<a href='/govt/clnt/%s'>%s</a><br>", clnt.Id, clnt.Id))
+	}
+	clntLock.Unlock()
+}
+
+func (clnt *Clnt) statsRegister() {
+	http.Handle("/govt/clnt/"+clnt.Id, clnt)
+}
+
+func (clnt *Clnt) statsUnregister() {
+	http.Handle("/govt/clnt/"+clnt.Id, nil)
+}
+
+
+func statsRegister() {
+	http.HandleFunc("/govt/clnt", clntServeHTTP)
+}
