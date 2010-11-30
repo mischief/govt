@@ -21,6 +21,11 @@ const (
 	DbgLogPackets
 )
 
+type StatsOps interface {
+	statsRegister()
+	statsUnregister()
+}
+
 type Clnt struct {
 	sync.Mutex
 	Debuglevel	int
@@ -66,10 +71,14 @@ type pool struct {
 	imap  []byte
 }
 
+type ClntList struct {
+	sync.Mutex
+	list *Clnt
+}
+
+var clnts *ClntList
 var DefaultDebuglevel int
 var DefaultLogger *vt.Logger
-var clntLock sync.Mutex
-var clntList *Clnt
 
 func (clnt *Clnt) Rpcnb(r *Req) *vt.Error {
 	clnt.Lock()
@@ -219,18 +228,21 @@ closed:
 		}
 	}
 
-	clntLock.Lock()
-	if clnt==clntList {
-		clntList = clnt.next
+	clnts.Lock()
+	if clnt==clnts.list {
+		clnts.list = clnt.next
 	} else {
 		var c *Clnt
 
-		for c=clntList; c.next!=clnt; c=c.next {
+		for c=clnts.list; c.next!=clnt; c=c.next {
 		}
 
 		c.next = clnt.next
 	}
-	clntLock.Unlock()
+	clnts.Unlock()
+        if sop, ok := (interface{}(clnt)).(StatsOps); ok {
+                sop.statsUnregister()
+        }
 }
 
 func (clnt *Clnt) send() {
@@ -316,11 +328,14 @@ func NewClnt(c net.Conn) *Clnt {
 	go clnt.recv()
 	go clnt.send()
 
-	clntLock.Lock()
-	clnt.next = clntList
-	clntList = clnt
-	clntLock.Unlock()
+	clnts.Lock()
+	clnt.next = clnts.list
+	clnts.list = clnt
+	clnts.Unlock()
 
+        if sop, ok := (interface{}(clnt)).(StatsOps); ok {
+                sop.statsRegister()
+        }
 	return clnt
 }
 
@@ -497,10 +512,6 @@ func (clnt *Clnt) calcScore(data []byte) (ret vt.Score) {
 	return
 }
 
-func init() {
-	statsRegister()
-}
-
 func processBanner(c net.Conn) bool {
 	var i int
 
@@ -522,4 +533,11 @@ func processBanner(c net.Conn) bool {
 	}
 
 	return vt.CheckBanner(string(buf[0:i]))
+}
+
+func init() {
+	clnts = new(ClntList)
+        if sop, ok := (interface{}(clnts)).(StatsOps); ok {
+                sop.statsRegister()
+        }
 }

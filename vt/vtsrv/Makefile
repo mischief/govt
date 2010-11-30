@@ -1,10 +1,11 @@
 include $(GOROOT)/src/Make.inc
 
-STATS=http
-#STATS=none
+STATS=
+#STATS=stats_http.go
+
 TARG=govt.googlecode.com/hg/vtsrv
 GOFILES=\
 	srv.go\
-	stats_$(STATS).go\
+	$(STATS)\
 
 include $(GOROOT)/src/Make.pkg

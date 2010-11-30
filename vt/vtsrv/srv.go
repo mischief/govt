@@ -56,6 +56,11 @@ type WriteOp interface {
 	Write(*Req)
 }
 
+type StatsOps interface {
+	statsRegister()
+	statsUnregister()
+}
+
 type Conn struct {
 	sync.Mutex
 	Srv        *Srv
@@ -109,7 +114,9 @@ func (srv *Srv) Start(ops interface{}) {
 		srv.Log = vt.NewLogger(1024)
 	}
 
-	srv.statsRegister()
+	if sop, ok := (interface{}(srv)).(StatsOps); ok {
+		sop.statsRegister()
+	}
 }
 
 func (srv *Srv) String() string {
@@ -276,7 +283,10 @@ func (srv *Srv) NewConn(c net.Conn) {
 		op.ConnOpened(conn)
 	}
 
-	//	conn.statsRegister()
+	if sop, ok := (interface{}(conn)).(StatsOps); ok {
+		sop.statsRegister()
+	}
+
 	go conn.recv()
 	go conn.send()
 }
@@ -377,7 +387,9 @@ closed:
 		conn.next.prev = conn.prev
 	}
 	conn.Srv.Unlock()
-	conn.statsUnregister()
+	if sop, ok := (interface{}(conn)).(StatsOps); ok {
+		sop.statsUnregister()
+	}
 
 	if op, ok := (conn.Srv.ops).(ConnOps); ok {
 		op.ConnClosed(conn)
