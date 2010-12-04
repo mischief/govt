@@ -209,7 +209,7 @@ func CheckBanner(banner string) bool {
 	}
 
 	ds := strings.Split(banner, "-", 3)
-	if len(ds) < 3 || ds[0] != "venti-" {
+	if len(ds) < 3 || ds[0] != "venti" {
 		return false
 	}
 
