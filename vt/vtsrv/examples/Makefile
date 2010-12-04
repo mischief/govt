@@ -4,7 +4,7 @@
 
 include $(GOROOT)/src/Make.inc
 
-TARG=vtram
+TARG=vtram grande
 OFILES=$(TARG:%=%.$O)
 
 all: $(TARG)
