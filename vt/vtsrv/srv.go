@@ -324,6 +324,7 @@ func (conn *Conn) recv() {
 		pos += n
 		for pos > 2 {
 			sz, _ := vt.Gint16(buf)
+			sz += 2
 			if sz > vt.Maxblock {
 				log.Println("bad client connection: ", conn.conn.RemoteAddr())
 				conn.conn.Close()
