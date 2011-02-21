@@ -278,7 +278,12 @@ func (clnt *Clnt) send() {
 				pos += n
 				nreqs++
 				clnt.ReqFree(req)
-				req, _ = <-clnt.reqout
+				select {
+				default:
+					req = nil
+
+				case req = <-clnt.reqout:
+				}
 			}
 
 			nwrites := 0
@@ -371,11 +376,15 @@ func Connect(ntype, addr string) (clnt *Clnt, err *vt.Error) {
 }
 
 func (clnt *Clnt) ReqAlloc() *Req {
-	req, ok := <-clnt.reqchan
-	if !ok {
+	var req *Req
+
+	select {
+	default:
 		req = new(Req)
 		req.Clnt = clnt
 		req.tag = uint8(clnt.tagpool.getId())
+
+	case req = <- clnt.reqchan:
 	}
 
 	return req
@@ -389,8 +398,11 @@ func (clnt *Clnt) ReqFree(req *Req) {
 	req.next = nil
 	req.prev = nil
 
-	if ok := clnt.reqchan <- req; !ok {
+	select {
+	default:
 		clnt.tagpool.putId(uint32(req.tag))
+
+	case clnt.reqchan <- req:
 	}
 }
 
@@ -499,16 +511,24 @@ func (clnt *Clnt) logFcall(c *vt.Call) {
 }
 
 func (clnt *Clnt) calcScore(data []byte) (ret vt.Score) {
-	s1, ok := <-clnt.schan
-	if !ok {
+	var s1 hash.Hash
+
+	select {
+	default:
 		s1 = sha1.New()
-	} else {
+	case s1 = <- clnt.schan:
 		s1.Reset()
 	}
 
 	s1.Write(data)
 	ret = s1.Sum()
-	_ = clnt.schan <- s1
+
+	select {
+	case clnt.schan <- s1:
+		break
+	default:
+	}
+
 	return
 }
 

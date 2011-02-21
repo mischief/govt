@@ -124,11 +124,14 @@ func (srv *Srv) String() string {
 }
 
 func (srv *Srv) ReqAlloc() *Req {
-	r, ok := <-srv.rchan
-	if !ok {
+	var r *Req
+
+	select {
+	default:
 		r = new(Req)
 		r.Tc = new(vt.Call)
 		r.Rc = new(vt.Call)
+	case r = <-srv.rchan:
 	}
 
 	return r
@@ -138,7 +141,11 @@ func (srv *Srv) ReqFree(r *Req) {
 	r.Conn = nil
 	r.Tc.Clear()
 	r.Rc.Clear()
-	_ = srv.rchan <- r
+	select {
+	case srv.rchan <- r:
+		break
+	default:
+	}
 
 }
 
@@ -429,7 +436,11 @@ func (conn *Conn) send() {
 				pos += n
 				nreqs++
 				conn.Srv.ReqFree(req)
-				req, _ = <-conn.reqout
+				select {
+				default:
+					req = nil
+				case req = <-conn.reqout:
+				}
 			}
 
 			nwrites := 0
