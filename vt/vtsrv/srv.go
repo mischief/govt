@@ -565,14 +565,14 @@ func processBanner(c net.Conn) bool {
 	var i int
 
 	n, err := c.Write([]byte(vt.Banner))
-	if err!=nil || n!=len(vt.Banner) {
+	if err != nil || n != len(vt.Banner) {
 		return false
 	}
 
 	buf := make([]byte, 1024)
-	for i=0; i<len(buf); i++ {
-		n, err := c.Read(buf[i:i+1])
-		if err!=nil || n!=1 {
+	for i = 0; i < len(buf); i++ {
+		n, err := c.Read(buf[i : i+1])
+		if err != nil || n != 1 {
 			return false
 		}
 

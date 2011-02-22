@@ -214,7 +214,7 @@ func CheckBanner(banner string) bool {
 	}
 
 	vs := strings.Split(ds[1], ":", -1)
-	for i:=0; i<len(vs); i++ {
+	for i := 0; i < len(vs); i++ {
 		if vs[i] == "02" {
 			return true
 		}

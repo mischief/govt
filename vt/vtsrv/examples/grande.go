@@ -22,7 +22,7 @@ import (
 type Grande struct {
 	vtsrv.Srv
 	topDir string
-	schan chan hash.Hash
+	schan  chan hash.Hash
 }
 
 var addr = flag.String("addr", ":17034", "network address")
@@ -54,7 +54,7 @@ func (srv *Grande) calcScore(data []byte) (ret vt.Score) {
 	select {
 	default:
 		s1 = sha1.New()
-	case s1 = <- srv.schan:
+	case s1 = <-srv.schan:
 		s1.Reset()
 	}
 
@@ -77,8 +77,8 @@ func (srv *Grande) Read(req *vtsrv.Req) {
 
 	bname := srv.Name(req.Tc.Score)
 	f, err := os.Open(bname, os.O_RDONLY, 0)
-	if err!=nil {
-error:
+	if err != nil {
+	error:
 		req.RespondError(err.String())
 		return
 	}
@@ -86,11 +86,10 @@ error:
 	b := make([]byte, req.Tc.Count)
 	n, err = f.Read(b)
 	f.Close()
-	if err!=nil {
+	if err != nil {
 		goto error
 	}
 
-	
 	req.RespondRead(b[0:n])
 }
 
@@ -101,24 +100,24 @@ func (srv *Grande) Write(req *vtsrv.Req) {
 	s := srv.calcScore(req.Tc.Data)
 	dname := fmt.Sprintf("%s/%02x/%02x", srv.topDir, s[0], s[1])
 	err := os.MkdirAll(dname, 0777)
-	if err!=nil {
-error:
+	if err != nil {
+	error:
 		req.RespondError(err.String())
 		return
 	}
 
-	f, err = os.Open(srv.Name(s), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0666)
-	if err!=nil {
+	f, err = os.Open(srv.Name(s), os.O_WRONLY|os.O_CREAT|os.O_TRUNC, 0666)
+	if err != nil {
 		goto error
 	}
 
 	defer f.Close()
 	n, err = f.Write(req.Tc.Data)
-	if err!=nil {
-		goto error;
+	if err != nil {
+		goto error
 	}
 
-	if n!=len(req.Tc.Data) {
+	if n != len(req.Tc.Data) {
 		req.RespondError("short write")
 		return
 	}

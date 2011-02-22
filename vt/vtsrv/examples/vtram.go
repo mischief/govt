@@ -47,7 +47,7 @@ func (srv *Vtram) calcScore(data []byte) (ret vt.Score) {
 	select {
 	default:
 		s1 = sha1.New()
-	case s1 = <- srv.schan:
+	case s1 = <-srv.schan:
 		s1.Reset()
 	}
 

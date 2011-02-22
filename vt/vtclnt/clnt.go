@@ -28,39 +28,39 @@ type StatsOps interface {
 
 type Clnt struct {
 	sync.Mutex
-	Debuglevel	int
-	Id		string
-	Log		*vt.Logger
+	Debuglevel int
+	Id         string
+	Log        *vt.Logger
 
-	conn		net.Conn
-	tagpool		*pool
-	reqout		chan *Req
-	done		chan bool
-	reqfirst	*Req
-	reqlast		*Req
-	err		*vt.Error
-	reqchan		chan *Req
-	schan		chan hash.Hash
-	next, prev	*Clnt
+	conn       net.Conn
+	tagpool    *pool
+	reqout     chan *Req
+	done       chan bool
+	reqfirst   *Req
+	reqlast    *Req
+	err        *vt.Error
+	reqchan    chan *Req
+	schan      chan hash.Hash
+	next, prev *Clnt
 
 	// stats
-	nreqs		int    // number of requests processed
-	tsz		uint64 // total size of the T messages received
-	rsz		uint64 // total size of the R messages sent
-	npend		int    // number of currently pending requests
-	maxpend		int    // maximum number of pending requests
-	nreads		int    // number of reads from the connection
-	nwrites		int    // number of writes to the connection
+	nreqs   int    // number of requests processed
+	tsz     uint64 // total size of the T messages received
+	rsz     uint64 // total size of the R messages sent
+	npend   int    // number of currently pending requests
+	maxpend int    // maximum number of pending requests
+	nreads  int    // number of reads from the connection
+	nwrites int    // number of writes to the connection
 }
 
 type Req struct {
 	sync.Mutex
-	Clnt		*Clnt
-	Tc, Rc		vt.Call
-	Err		*vt.Error
-	Done		chan *Req
-	tag		uint8
-	next, prev	*Req
+	Clnt       *Clnt
+	Tc, Rc     vt.Call
+	Err        *vt.Error
+	Done       chan *Req
+	tag        uint8
+	next, prev *Req
 }
 
 type pool struct {
@@ -129,7 +129,7 @@ func (clnt *Clnt) recv() {
 			sz, _ := vt.Gint16(buf)
 			sz += 2
 			if sz > vt.Maxblock {
-				err = &vt.Error{fmt.Sprintf("bad client connection: %s", clnt.Id)};
+				err = &vt.Error{fmt.Sprintf("bad client connection: %s", clnt.Id)}
 				clnt.conn.Close()
 				goto closed
 			}
@@ -144,15 +144,15 @@ func (clnt *Clnt) recv() {
 
 			tag, _ := vt.Gint8(buf[3:])
 			clnt.Lock()
-			for req=clnt.reqfirst; req!=nil; req=req.next {
+			for req = clnt.reqfirst; req != nil; req = req.next {
 				if req.tag == tag {
-					if req.prev!=nil {
+					if req.prev != nil {
 						req.prev.next = req.next
 					} else {
 						clnt.reqfirst = req.next
 					}
 
-					if req.next!=nil {
+					if req.next != nil {
 						req.next.prev = req.prev
 					} else {
 						clnt.reqlast = req.prev
@@ -170,11 +170,11 @@ func (clnt *Clnt) recv() {
 			}
 
 			csz, err = vt.Unpack(buf, &req.Rc)
-			if err!=nil {
+			if err != nil {
 				clnt.conn.Close()
 				goto closed
 			}
-				
+
 			if clnt.Debuglevel > 0 {
 				clnt.logFcall(&req.Rc)
 				if clnt.Debuglevel&DbgPrintPackets != 0 {
@@ -212,7 +212,7 @@ closed:
 
 	/* send error to all pending requests */
 	clnt.Lock()
-	if clnt.err!=nil {
+	if clnt.err != nil {
 		clnt.err = err
 	}
 
@@ -229,20 +229,20 @@ closed:
 	}
 
 	clnts.Lock()
-	if clnt==clnts.list {
+	if clnt == clnts.list {
 		clnts.list = clnt.next
 	} else {
 		var c *Clnt
 
-		for c=clnts.list; c.next!=clnt; c=c.next {
+		for c = clnts.list; c.next != clnt; c = c.next {
 		}
 
 		c.next = clnt.next
 	}
 	clnts.Unlock()
-        if sop, ok := (interface{}(clnt)).(StatsOps); ok {
-                sop.statsUnregister()
-        }
+	if sop, ok := (interface{}(clnt)).(StatsOps); ok {
+		sop.statsUnregister()
+	}
 }
 
 func (clnt *Clnt) send() {
@@ -338,9 +338,9 @@ func NewClnt(c net.Conn) *Clnt {
 	clnts.list = clnt
 	clnts.Unlock()
 
-        if sop, ok := (interface{}(clnt)).(StatsOps); ok {
-                sop.statsRegister()
-        }
+	if sop, ok := (interface{}(clnt)).(StatsOps); ok {
+		sop.statsRegister()
+	}
 	return clnt
 }
 
@@ -362,12 +362,12 @@ func Connect(ntype, addr string) (clnt *Clnt, err *vt.Error) {
 	tc.Codec = tc.Crypto
 
 	err = clnt.Rpcnb(req)
-	if err!=nil {
+	if err != nil {
 		return
 	}
 
-	<- req.Done
-	if req.Err!=nil {
+	<-req.Done
+	if req.Err != nil {
 		err = req.Err
 	}
 	clnt.ReqFree(req)
@@ -384,7 +384,7 @@ func (clnt *Clnt) ReqAlloc() *Req {
 		req.Clnt = clnt
 		req.tag = uint8(clnt.tagpool.getId())
 
-	case req = <- clnt.reqchan:
+	case req = <-clnt.reqchan:
 	}
 
 	return req
@@ -416,7 +416,7 @@ func (clnt *Clnt) Getnb(score vt.Score, btype uint8, count uint16, done chan *Re
 	tc.Count = count
 
 	err = clnt.Rpcnb(req)
-	if err!=nil {
+	if err != nil {
 		clnt.ReqFree(req)
 	}
 
@@ -426,12 +426,12 @@ func (clnt *Clnt) Getnb(score vt.Score, btype uint8, count uint16, done chan *Re
 func (clnt *Clnt) Get(score vt.Score, btype uint8, count uint16) (data []byte, err *vt.Error) {
 	done := make(chan *Req)
 	err = clnt.Getnb(score, btype, count, done)
-	if err!=nil {
+	if err != nil {
 		return
 	}
 
-	req := <- done
-	if req.Err!=nil {
+	req := <-done
+	if req.Err != nil {
 		err = req.Err
 		clnt.ReqFree(req)
 		return
@@ -451,7 +451,7 @@ func (clnt *Clnt) Put(btype uint8, data []byte) (score vt.Score, err *vt.Error) 
 	tc.Data = data
 
 	err = clnt.Rpcnb(req)
-	if err!=nil {
+	if err != nil {
 		clnt.ReqFree(req)
 	} else {
 		score = clnt.calcScore(data)
@@ -467,7 +467,7 @@ func (clnt *Clnt) Sync() (err *vt.Error) {
 	tc := req.Tc
 	tc.Id = vt.Tsync
 	err = clnt.Rpcnb(req)
-	if err!=nil {
+	if err != nil {
 		clnt.ReqFree(req)
 		return
 	}
@@ -475,7 +475,7 @@ func (clnt *Clnt) Sync() (err *vt.Error) {
 	// set all outstanding Twrites to report when they are done
 	clnt.Lock()
 	n := 1
-	for r:=clnt.reqfirst; r!=nil; r=r.next {
+	for r := clnt.reqfirst; r != nil; r = r.next {
 		if r.Tc.Id == vt.Twrite {
 			r.Done = done
 			n++
@@ -483,9 +483,9 @@ func (clnt *Clnt) Sync() (err *vt.Error) {
 	}
 	clnt.Unlock()
 
-	for n>0 {
-		req := <- done
-		if req.Err != nil && err!=nil {
+	for n > 0 {
+		req := <-done
+		if req.Err != nil && err != nil {
 			err = req.Err
 		}
 
@@ -516,7 +516,7 @@ func (clnt *Clnt) calcScore(data []byte) (ret vt.Score) {
 	select {
 	default:
 		s1 = sha1.New()
-	case s1 = <- clnt.schan:
+	case s1 = <-clnt.schan:
 		s1.Reset()
 	}
 
@@ -536,14 +536,14 @@ func processBanner(c net.Conn) bool {
 	var i int
 
 	n, err := c.Write([]byte(vt.Banner))
-	if err!=nil || n!=len(vt.Banner) {
+	if err != nil || n != len(vt.Banner) {
 		return false
 	}
 
 	buf := make([]byte, 1024)
-	for i=0; i<len(buf); i++ {
-		n, err := c.Read(buf[i:i+1])
-		if err!=nil || n!=1 {
+	for i = 0; i < len(buf); i++ {
+		n, err := c.Read(buf[i : i+1])
+		if err != nil || n != 1 {
 			return false
 		}
 
@@ -557,7 +557,7 @@ func processBanner(c net.Conn) bool {
 
 func init() {
 	clnts = new(ClntList)
-        if sop, ok := (interface{}(clnts)).(StatsOps); ok {
-                sop.statsRegister()
-        }
+	if sop, ok := (interface{}(clnts)).(StatsOps); ok {
+		sop.statsRegister()
+	}
 }
