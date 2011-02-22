@@ -49,16 +49,22 @@ func (srv *Grande) init() {
 }
 
 func (srv *Grande) calcScore(data []byte) (ret vt.Score) {
-	s1, ok := <-srv.schan
-	if !ok {
+	var s1 hash.Hash
+
+	select {
+	default:
 		s1 = sha1.New()
-	} else {
+	case s1 = <- srv.schan:
 		s1.Reset()
 	}
 
 	s1.Write(data)
 	ret = s1.Sum()
-	_ = srv.schan <- s1
+	select {
+	case srv.schan <- s1:
+		break
+	default:
+	}
 	return
 }
 
