@@ -17,16 +17,16 @@ import (
 type Vtram struct {
 	vtsrv.Srv
 	sync.Mutex
-	htbl  map[int]*Block
-	schan chan hash.Hash
+	htbl	map[int]*Block
+	schan	chan hash.Hash
 }
 
 type Block struct {
-	btype uint8
-	score vt.Score
-	data  []byte
+	btype	uint8
+	score	vt.Score
+	data	[]byte
 
-	next *Block
+	next	*Block
 }
 
 var addr = flag.String("addr", ":17034", "network address")

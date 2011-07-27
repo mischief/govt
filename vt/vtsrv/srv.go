@@ -15,12 +15,12 @@ import (
 )
 
 const (
-	Cnew = iota
+	Cnew	= iota
 	Chello
 )
 
 const (
-	DbgPrintCalls = 1 << iota
+	DbgPrintCalls	= 1 << iota
 	DbgPrintPackets
 	DbgLogCalls
 	DbgLogPackets
@@ -63,48 +63,48 @@ type StatsOps interface {
 
 type Conn struct {
 	sync.Mutex
-	Srv        *Srv
-	Id         string
-	Debuglevel int
-	status     int
-	conn       net.Conn
-	reqs       *Req
-	reqout     chan *Req
-	prev, next *Conn
-	done       chan bool
+	Srv		*Srv
+	Id		string
+	Debuglevel	int
+	status		int
+	conn		net.Conn
+	reqs		*Req
+	reqout		chan *Req
+	prev, next	*Conn
+	done		chan bool
 
 	// stats
-	nreqs   int    // number of requests processed
-	tsz     uint64 // total size of the T messages received
-	rsz     uint64 // total size of the R messages sent
-	npend   int    // number of currently pending requests
-	maxpend int    // maximum number of pending requests
-	nreads  int    // number of reads from the connection
-	nwrites int    // number of writes to the connection
+	nreqs	int	// number of requests processed
+	tsz	uint64	// total size of the T messages received
+	rsz	uint64	// total size of the R messages sent
+	npend	int	// number of currently pending requests
+	maxpend	int	// maximum number of pending requests
+	nreads	int	// number of reads from the connection
+	nwrites	int	// number of writes to the connection
 }
 
 type Req struct {
-	Tc   *vt.Call
-	Rc   *vt.Call
-	Conn *Conn
+	Tc	*vt.Call
+	Rc	*vt.Call
+	Conn	*Conn
 }
 
 type Srv struct {
 	sync.Mutex
-	Id         string
-	Debuglevel int
-	Log        *vt.Logger
-	ops        interface{}
-	connlist   *Conn
-	rchan      chan *Req
+	Id		string
+	Debuglevel	int
+	Log		*vt.Logger
+	ops		interface{}
+	connlist	*Conn
+	rchan		chan *Req
 
 	// stats
-	nreqs   int    // number of requests processed
-	tsz     uint64 // total size of the T messages received
-	rsz     uint64 // total size of the R messages sent
-	maxpend int    // maximum number of pending requests
-	nreads  int    // number of reads from the connection
-	nwrites int    // number of writes to the connection
+	nreqs	int	// number of requests processed
+	tsz	uint64	// total size of the T messages received
+	rsz	uint64	// total size of the R messages sent
+	maxpend	int	// maximum number of pending requests
+	nreads	int	// number of reads from the connection
+	nwrites	int	// number of writes to the connection
 }
 
 func (srv *Srv) Start(ops interface{}) {
@@ -308,7 +308,6 @@ func (conn *Conn) recv() {
 	pos := 0
 	for {
 		if len(buf) < vt.Maxblock {
-		resize:
 			b := make([]byte, bufsz)
 			copy(b, buf[0:pos])
 			buf = b
@@ -332,7 +331,10 @@ func (conn *Conn) recv() {
 			}
 			if pos < int(sz) {
 				if len(buf) < int(sz) {
-					goto resize
+					b := make([]byte, bufsz)
+					copy(b, buf[0:pos])
+					buf = b
+					b = nil
 				}
 
 				break
@@ -535,7 +537,7 @@ func checkBanner(c net.Conn) bool {
 		}
 	}
 
-	vers := strings.Split(string(buf[0:i]), ":", -1)
+	vers := strings.SplitN(string(buf[0:i]), ":", -1)
 	for i = 0; i < len(vers); i++ {
 		if vers[i] == bver {
 			return true
@@ -546,7 +548,6 @@ func checkBanner(c net.Conn) bool {
 }
 
 func listen(l net.Listener, srv *Srv) {
-again:
 	for {
 		c, err := l.Accept()
 		if err != nil {

@@ -8,53 +8,52 @@ import "strings"
 
 // Venti messages
 const (
-	Rerror   = 1
-	Tping    = 2
-	Rping    = 3
-	Thello   = 4
-	Rhello   = 5
-	Tgoodbye = 6
-	Tread    = 12
-	Rread    = 13
-	Twrite   = 14
-	Rwrite   = 15
-	Tsync    = 16
-	Rsync    = 17
+	Rerror		= 1
+	Tping		= 2
+	Rping		= 3
+	Thello		= 4
+	Rhello		= 5
+	Tgoodbye	= 6
+	Tread		= 12
+	Rread		= 13
+	Twrite		= 14
+	Rwrite		= 15
+	Tsync		= 16
+	Rsync		= 17
 )
-
 
 // Other constants
 const (
-	Scoresize = 20
-	Entrysize = 40
-	Maxblock  = 56 * 1024
+	Scoresize	= 20
+	Entrysize	= 40
+	Maxblock	= 56 * 1024
 )
 
 // Block type
 const (
-	DataBlock = 0 << 3
-	DirBlock  = 1 << 3
-	RBlock    = 2 << 3
+	DataBlock	= 0 << 3
+	DirBlock	= 1 << 3
+	RBlock		= 2 << 3
 )
 
 type Call struct {
-	Id       byte
-	Tag      byte
-	Ename    string // Rerror
-	Version  string // Thello
-	Uid      string // Thello
-	Strength uint8  // Thello
-	Crypto   []byte // Thello
-	Codec    []byte // Thello
-	Sid      string // Rhello
-	Rcrypto  byte   // Rhello
-	Rcodec   byte   // Rhello
-	Score    Score  // Tread, Rwrite
-	Btype    byte   // Tread, Rwrite
-	Count    uint16 // Tread
-	Data     []byte // Twrite, Rread
+	Id		byte
+	Tag		byte
+	Ename		string	// Rerror
+	Version		string	// Thello
+	Uid		string	// Thello
+	Strength	uint8	// Thello
+	Crypto		[]byte	// Thello
+	Codec		[]byte	// Thello
+	Sid		string	// Rhello
+	Rcrypto		byte	// Rhello
+	Rcodec		byte	// Rhello
+	Score		Score	// Tread, Rwrite
+	Btype		byte	// Tread, Rwrite
+	Count		uint16	// Tread
+	Data		[]byte	// Twrite, Rread
 
-	Pkt []byte
+	Pkt	[]byte
 }
 
 type Score []byte
@@ -69,7 +68,7 @@ var Zeroscore = Score{
 
 var Banner string = "venti-02-govt\n"
 
-func Gint8(buf []byte) (uint8, []byte) { return buf[0], buf[1:len(buf)] }
+func Gint8(buf []byte) (uint8, []byte)	{ return buf[0], buf[1:len(buf)] }
 
 func Gint16(buf []byte) (uint16, []byte) {
 	return uint16(buf[1]) | (uint16(buf[0]) << 8), buf[2:len(buf)]
@@ -208,12 +207,12 @@ func CheckBanner(banner string) bool {
 		return false
 	}
 
-	ds := strings.Split(banner, "-", 3)
+	ds := strings.SplitN(banner, "-", 3)
 	if len(ds) < 3 || ds[0] != "venti" {
 		return false
 	}
 
-	vs := strings.Split(ds[1], ":", -1)
+	vs := strings.SplitN(ds[1], ":", -1)
 	for i := 0; i < len(vs); i++ {
 		if vs[i] == "02" {
 			return true

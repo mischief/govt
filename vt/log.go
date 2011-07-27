@@ -4,23 +4,23 @@
 package vt
 
 type Log struct {
-	Data  interface{}
-	Owner interface{}
-	Type  int
+	Data	interface{}
+	Owner	interface{}
+	Type	int
 }
 
 type Logger struct {
-	items   []*Log
-	idx     int
-	logchan chan *Log
-	fltchan chan *flt
-	rszchan chan int
+	items	[]*Log
+	idx	int
+	logchan	chan *Log
+	fltchan	chan *flt
+	rszchan	chan int
 }
 
 type flt struct {
-	owner   interface{}
-	itype   int
-	fltchan chan []*Log
+	owner	interface{}
+	itype	int
+	fltchan	chan []*Log
 }
 
 func NewLogger(sz int) *Logger {

@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	DbgPrintCalls = 1 << iota
+	DbgPrintCalls	= 1 << iota
 	DbgPrintPackets
 	DbgLogCalls
 	DbgLogPackets
@@ -28,52 +28,52 @@ type StatsOps interface {
 
 type Clnt struct {
 	sync.Mutex
-	Debuglevel int
-	Id         string
-	Log        *vt.Logger
+	Debuglevel	int
+	Id		string
+	Log		*vt.Logger
 
-	conn       net.Conn
-	tagpool    *pool
-	reqout     chan *Req
-	done       chan bool
-	reqfirst   *Req
-	reqlast    *Req
-	err        *vt.Error
-	reqchan    chan *Req
-	schan      chan hash.Hash
-	next, prev *Clnt
+	conn		net.Conn
+	tagpool		*pool
+	reqout		chan *Req
+	done		chan bool
+	reqfirst	*Req
+	reqlast		*Req
+	err		*vt.Error
+	reqchan		chan *Req
+	schan		chan hash.Hash
+	next, prev	*Clnt
 
 	// stats
-	nreqs   int    // number of requests processed
-	tsz     uint64 // total size of the T messages received
-	rsz     uint64 // total size of the R messages sent
-	npend   int    // number of currently pending requests
-	maxpend int    // maximum number of pending requests
-	nreads  int    // number of reads from the connection
-	nwrites int    // number of writes to the connection
+	nreqs	int	// number of requests processed
+	tsz	uint64	// total size of the T messages received
+	rsz	uint64	// total size of the R messages sent
+	npend	int	// number of currently pending requests
+	maxpend	int	// maximum number of pending requests
+	nreads	int	// number of reads from the connection
+	nwrites	int	// number of writes to the connection
 }
 
 type Req struct {
 	sync.Mutex
-	Clnt       *Clnt
-	Tc, Rc     vt.Call
-	Err        *vt.Error
-	Done       chan *Req
-	tag        uint8
-	next, prev *Req
+	Clnt		*Clnt
+	Tc, Rc		vt.Call
+	Err		*vt.Error
+	Done		chan *Req
+	tag		uint8
+	next, prev	*Req
 }
 
 type pool struct {
 	sync.Mutex
-	need  int
-	nchan chan uint32
-	maxid uint32
-	imap  []byte
+	need	int
+	nchan	chan uint32
+	maxid	uint32
+	imap	[]byte
 }
 
 type ClntList struct {
 	sync.Mutex
-	list *Clnt
+	list	*Clnt
 }
 
 var clnts *ClntList
@@ -111,7 +111,6 @@ func (clnt *Clnt) recv() {
 	pos := 0
 	for {
 		if len(buf) < int(vt.Maxblock) {
-		resize:
 			b := make([]byte, vt.Maxblock*8)
 			copy(b, buf[0:pos])
 			buf = b
@@ -136,7 +135,10 @@ func (clnt *Clnt) recv() {
 
 			if pos < int(sz) {
 				if len(buf) < int(sz) {
-					goto resize
+					b := make([]byte, vt.Maxblock*8)
+					copy(b, buf[0:pos])
+					buf = b
+					b = nil
 				}
 
 				break
@@ -345,7 +347,7 @@ func NewClnt(c net.Conn) *Clnt {
 }
 
 func Connect(ntype, addr string) (clnt *Clnt, err *vt.Error) {
-	c, e := net.Dial(ntype, "", addr)
+	c, e := net.Dial(ntype, addr)
 	if e != nil {
 		return nil, &vt.Error{e.String()}
 	}

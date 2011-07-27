@@ -21,8 +21,8 @@ import (
 
 type Grande struct {
 	vtsrv.Srv
-	topDir string
-	schan  chan hash.Hash
+	topDir	string
+	schan	chan hash.Hash
 }
 
 var addr = flag.String("addr", ":17034", "network address")
@@ -76,9 +76,8 @@ func (srv *Grande) Read(req *vtsrv.Req) {
 	var n int
 
 	bname := srv.Name(req.Tc.Score)
-	f, err := os.Open(bname, os.O_RDONLY, 0)
+	f, err := os.Open(bname)
 	if err != nil {
-	error:
 		req.RespondError(err.String())
 		return
 	}
@@ -87,7 +86,8 @@ func (srv *Grande) Read(req *vtsrv.Req) {
 	n, err = f.Read(b)
 	f.Close()
 	if err != nil {
-		goto error
+		req.RespondError(err.String())
+		return
 	}
 
 	req.RespondRead(b[0:n])
@@ -101,20 +101,21 @@ func (srv *Grande) Write(req *vtsrv.Req) {
 	dname := fmt.Sprintf("%s/%02x/%02x", srv.topDir, s[0], s[1])
 	err := os.MkdirAll(dname, 0777)
 	if err != nil {
-	error:
 		req.RespondError(err.String())
 		return
 	}
 
-	f, err = os.Open(srv.Name(s), os.O_WRONLY|os.O_CREAT|os.O_TRUNC, 0666)
+	f, err = os.OpenFile(srv.Name(s), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 	if err != nil {
-		goto error
+		req.RespondError(err.String())
+		return
 	}
 
 	defer f.Close()
 	n, err = f.Write(req.Tc.Data)
 	if err != nil {
-		goto error
+		req.RespondError(err.String())
+		return
 	}
 
 	if n != len(req.Tc.Data) {

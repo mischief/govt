@@ -7,7 +7,7 @@ package vt
 //import "log"
 
 const (
-	Overrtype = 0
+	Overrtype	= 0
 	Ovroottype
 	Ovdirtype
 	Ovptype0
@@ -23,7 +23,6 @@ const (
 	Ovdtype
 	Ovmaxtype
 )
-
 
 var todisk = [...]uint8{
 	Ovdtype,
@@ -82,7 +81,7 @@ func toDiskType(val uint8) int {
 }
 
 func PackCall(buf []byte, id uint8, tag uint8, size int) (int, []byte) {
-	size += 2 + 1 + 1 // size[2] id[1] tag[1]
+	size += 2 + 1 + 1	// size[2] id[1] tag[1]
 	if len(buf) < size {
 		return -1, nil
 	}
@@ -109,7 +108,7 @@ func PackTping(buf []byte, tag uint8) int {
 
 func PackThello(buf []byte, tag uint8, version, uid string, strength uint8, crypto, codec []byte) int {
 	sz, buf := PackCall(buf, Thello, tag,
-		7+len(version)+len(uid)+len(crypto)+len(codec)) // vesion[s] uid[s] strength[1] crypto[n] codec[n]
+		7+len(version)+len(uid)+len(crypto)+len(codec))	// vesion[s] uid[s] strength[1] crypto[n] codec[n]
 	if buf == nil {
 		return -1
 	}
@@ -128,7 +127,7 @@ func PackTgoodbye(buf []byte, tag uint8) int {
 }
 
 func PackTread(buf []byte, tag uint8, score Score, btype uint8, count uint16) int {
-	sz, buf := PackCall(buf, Tread, tag, Scoresize+1+1+2) // score[20] type[1] pad[1] count[2]
+	sz, buf := PackCall(buf, Tread, tag, Scoresize+1+1+2)	// score[20] type[1] pad[1] count[2]
 	if buf == nil {
 		return -1
 	}
@@ -142,7 +141,7 @@ func PackTread(buf []byte, tag uint8, score Score, btype uint8, count uint16) in
 }
 
 func PackTwrite(buf []byte, tag uint8, btype uint8, data []byte) int {
-	sz, buf := PackCall(buf, Twrite, tag, 1+3+len(data)) // type[1] pad[3] data
+	sz, buf := PackCall(buf, Twrite, tag, 1+3+len(data))	// type[1] pad[3] data
 	if buf == nil {
 		return -1
 	}
@@ -290,7 +289,7 @@ func Unpack(buf []byte, vc *Call) (int, *Error) {
 		vc.Version, buf = Gstr(buf)
 		vc.Uid, buf = Gstr(buf)
 		if buf == nil || len(buf) < 1 {
-			goto error
+			return 0, Epacket
 		}
 
 		vc.Strength, buf = Gint8(buf)
@@ -300,7 +299,7 @@ func Unpack(buf []byte, vc *Call) (int, *Error) {
 	case Rhello:
 		vc.Sid, buf = Gstr(buf)
 		if buf == nil || len(buf) < 2 {
-			goto error
+			return 0, Epacket
 		}
 
 		vc.Rcrypto, buf = Gint8(buf)
@@ -309,7 +308,7 @@ func Unpack(buf []byte, vc *Call) (int, *Error) {
 	case Tread:
 		vc.Score, buf = Gscore(buf)
 		if buf == nil || len(buf) < 4 {
-			goto error
+			return 0, Epacket
 		}
 
 		vc.Btype, buf = Gint8(buf)
@@ -328,7 +327,7 @@ func Unpack(buf []byte, vc *Call) (int, *Error) {
 
 	case Twrite:
 		if len(buf) < 4 {
-			goto error
+			return 0, Epacket
 		}
 
 		vc.Btype, buf = Gint8(buf)
@@ -352,7 +351,6 @@ func Unpack(buf []byte, vc *Call) (int, *Error) {
 	}
 
 	if buf == nil || len(buf) > 0 {
-	error:
 		return 0, Epacket
 	}
 

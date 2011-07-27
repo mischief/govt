@@ -50,7 +50,6 @@ func (clnt *Clnt) statsUnregister() {
 	http.Handle("/govt/clnt/"+clnt.Id, nil)
 }
 
-
 func (c *ClntList) statsRegister() {
 	http.HandleFunc("/govt/clnt", clntServeHTTP)
 }
