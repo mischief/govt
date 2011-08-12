@@ -15,6 +15,7 @@ import (
 	"os"
 	"sync"
 	"syscall"
+	"time"
 	"unsafe"
 	"govt.googlecode.com/hg/vt"
 	"govt.googlecode.com/hg/vtsrv"
@@ -22,7 +23,7 @@ import (
 
 const (
 	Magic      = 0x28b4
-	HeaderSize = 24
+	HeaderSize = 8		// magic[2] size[2] next[4]
 )
 
 type File struct {
@@ -31,6 +32,7 @@ type File struct {
 	size    uint64
 	synctip uint64
 	tip     uint64
+	lastip	uint64		// offset of the last block
 
 	chunksz uint64
 	chunks  [][]byte
@@ -47,10 +49,11 @@ type Vtmap struct {
 
 var addr = flag.String("addr", ":17034", "network address")
 var debug = flag.Int("debug", 0, "print debug messages")
+var align = flag.Int("align", 0, "block alignment")
 
 func (srv *Vtmap) init(fname string) (err os.Error) {
 	err = nil
-	srv.htbl = make(map[string][]byte)
+	srv.htbl = make(map[string][]byte, 1<<12)
 	srv.schan = make(chan hash.Hash, 32)
 	srv.f, err = NewFile(fname)
 	if err != nil {
@@ -95,49 +98,10 @@ func NewFile(fname string) (f *File, err os.Error) {
 	}
 
 	f.tip = 0
+	f.synctip = 0
+	f.lastip = ^uint64(0)
 
 	return f, nil
-}
-
-func (f *File) Read(offset uint64, count int) []byte {
-	idx := int(offset / f.chunksz)
-	if idx > len(f.chunks) {
-		return nil
-	}
-
-	buf := f.chunks[idx]
-	off := int(offset % f.chunksz)
-	if off+count > len(buf) {
-		return nil
-	}
-
-	return buf[off : off+count]
-}
-
-func (f *File) Write(data []byte, updatetip bool) (offset uint64, err os.Error) {
-	f.Lock()
-	idx := int(f.tip / f.chunksz)
-	off := int(f.tip % f.chunksz)
-	buf := f.chunks[idx]
-	if off+len(data) > len(buf) {
-		idx++
-		off = 0
-		if idx > len(f.chunks) {
-			f.Unlock()
-			return 0, os.NewError("arena full")
-		}
-
-		buf = f.chunks[idx]
-	}
-
-	if updatetip {
-		f.tip = uint64(idx)*f.chunksz + uint64(off) + uint64(len(data))
-	}
-	f.Unlock()
-
-	copy(buf[off:], data)
-	offset = (uint64(idx) * f.chunksz) + uint64(off)
-	return offset, nil
 }
 
 func (f *File) Sync() os.Error {
@@ -158,7 +122,7 @@ func (f *File) Sync() os.Error {
 			n = int(count)
 		}
 
-		start := uintptr(unsafe.Pointer(&buf[off])) &^ (0xfff)
+		start := uintptr(unsafe.Pointer(&buf[off])) &^ (0xfff)	// start address needs to be page-aligned
 		end := uintptr(unsafe.Pointer(&buf[off+n-1]))
 		_, _, e1 := syscall.Syscall(syscall.SYS_MSYNC, start, end-start, uintptr(syscall.MS_SYNC))
 		errno := int(e1)
@@ -173,83 +137,99 @@ func (f *File) Sync() os.Error {
 	return nil
 }
 
-func (f *File) ReadBlock(offset uint64) (size int, score []byte, data []byte, endoffset uint64, err os.Error) {
+// updates the tip
+func (f *File) ReadBlock() ([]byte, os.Error) {
 	var sz uint16
+	var next uint32
 
-	if offset%f.chunksz+HeaderSize > f.chunksz {
-		offset = (offset/f.chunksz + 1) * f.chunksz
-	}
+	idx := int(f.tip / f.chunksz)
+	off := int(f.tip % f.chunksz)
+	buf := f.chunks[idx]
 
-	hdr := f.Read(offset, HeaderSize)
-	m, p := vt.Gint16(hdr)
-	if m != Magic {
-		err = os.NewError("invalid magic")
-		return
-	}
-
+	m, p := vt.Gint16(buf[off:])
 	sz, p = vt.Gint16(p)
-	size = int(sz)
-	score = p[0:vt.Scoresize]
-	p = p[vt.Scoresize:]
-	dataoffset := offset + HeaderSize
-	if (dataoffset / f.chunksz) != ((dataoffset + uint64(size)) / f.chunksz) {
-		// data starts in the beginning of the next chunk
-		dataoffset = (dataoffset/f.chunksz + 1) * f.chunksz
+	next, p = vt.Gint32(p)
+
+	if m != Magic {
+		if m==0 && sz==0 {
+			// end of arena
+			return nil, nil
+		}
+
+		return nil, os.NewError("magic not found")
 	}
 
-	data = f.Read(dataoffset, size)
-	endoffset = dataoffset + uint64(size)
-	return
+	f.lastip = f.tip
+	f.tip += uint64(next)
+
+	return p[0:sz], nil
 }
 
-func (f *File) WriteBlock(score, data []byte) (ndata []byte, err os.Error) {
-	var hdr [HeaderSize]byte
-	var offset uint64
+func (f *File) WriteBlock(data []byte) (ndata []byte, err os.Error) {
+	blksz := HeaderSize + len(data)
+	idx := int(f.tip / f.chunksz)
+	off := int(f.tip % f.chunksz)
+	buf := f.chunks[idx]
+	if off + blksz >= len(buf) {
+		idx++
+		if idx >= len(f.chunks) {
+			return nil, os.NewError("arena full")
+		}
 
-	p := vt.Pint16(Magic, hdr[0:])
+		off = 0
+		buf = f.chunks[idx]
+		f.tip = uint64(idx) * f.chunksz
+		if off+blksz >= len(buf) {
+			return nil, os.NewError("arena full")
+		}
+
+		// update the last block's next pointer
+		if f.lastip != ^uint64(0) {
+			b := f.chunks[f.lastip / f.chunksz]
+			_ = vt.Pint16(uint16(f.tip - f.lastip), b[(f.lastip%f.chunksz) + 4:])
+			f.synctip = f.lastip
+		}
+	}
+
+	nextoff := f.tip + uint64(blksz)
+	if *align > 0 {
+		nextoff += uint64(*align) - nextoff%uint64(*align)
+	}
+
+	p := vt.Pint16(Magic, buf[off:])
 	p = vt.Pint16(uint16(len(data)), p)
-	copy(p[0:vt.Scoresize], score)
-	_, err = f.Write(hdr[0:], true)
-	if err != nil {
-		return
-	}
+	p = vt.Pint32(uint32(nextoff - f.tip), p)
+	copy(p, data)
+	f.lastip = f.tip
+	f.tip = nextoff
 
-	offset, err = f.Write(data, true)
-	if err != nil {
-		return
-	}
-
-	// marker for end of blocks
-	p = vt.Pint16(Magic, hdr[0:])
-	_ = vt.Pint16(0, p)
-	_, err = f.Write(hdr[0:], false)
-
-	ndata = f.Read(offset, len(data))
-	return
+	return p[0:len(data)], nil
 }
 
 func (srv *Vtmap) buildHash() os.Error {
-	for offset := srv.f.tip; offset < srv.f.size; {
-		size, score, block, endoffset, err := srv.f.ReadBlock(offset)
-		if err != nil {
-			if offset == 0 {
-				break
-			}
-
+	nblk := 0
+	blksz := uint64(0)
+	stime := time.Nanoseconds()
+	for {
+		blk, err := srv.f.ReadBlock()
+		if err!=nil {
 			return err
 		}
 
-		if size == 0 {
+		if blk == nil {
 			break
 		}
 
-		srv.htbl[string(score)] = block
-		offset = endoffset
-		srv.f.tip = offset
+		score := srv.calcScore(blk)
+		srv.htbl[string([]byte(score))] = blk
+		nblk++
+		blksz += uint64(len(blk))
 	}
+	etime := time.Nanoseconds()
 
 	srv.f.synctip = srv.f.tip
-	fmt.Printf("%d blocks read\n", len(srv.htbl))
+	fmt.Printf("read %d blocks total %v bytes in %v ms\n", nblk, blksz, (etime - stime) / 1000000)
+	fmt.Printf("total space used: %v bytes\n", srv.f.tip)
 	return nil
 }
 
@@ -286,21 +266,16 @@ func (srv *Vtmap) Read(req *vtsrv.Req) {
 	if b == nil {
 		req.RespondError("not found")
 	} else {
-		n := int(req.Tc.Count)
-		if n > len(b) {
-			n = len(b)
-		}
-
-		req.RespondRead(b[0:n])
+		req.RespondRead(b)
 	}
 }
 
 func (srv *Vtmap) Write(req *vtsrv.Req) {
 	score := srv.calcScore(req.Tc.Data)
-	srv.Lock()
 	strscore := string([]byte(score))
+	srv.Lock()
 	if srv.htbl[strscore] == nil {
-		block, err := srv.f.WriteBlock(score, req.Tc.Data)
+		block, err := srv.f.WriteBlock(req.Tc.Data)
 		if err != nil {
 			srv.Unlock()
 			req.RespondError(err.String())

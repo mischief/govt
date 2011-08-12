@@ -11,7 +11,7 @@ import (
 func (s Score) String() string {
 	ret := ""
 	for i := 0; i < Scoresize; i++ {
-		ret = fmt.Sprintf("%s%x", ret, s[i])
+		ret = fmt.Sprintf("%s%02x", ret, s[i])
 	}
 
 	return ret
