@@ -4,10 +4,10 @@
 package vtclnt
 
 import (
+	"code.google.com/p/govt/vt"
 	"fmt"
 	"io"
-	"http"
-	"govt.googlecode.com/hg/vt"
+	"net/http"
 )
 
 func (clnt *Clnt) ServeHTTP(c http.ResponseWriter, r *http.Request) {

@@ -4,10 +4,10 @@
 package vtsrv
 
 import (
+	"code.google.com/p/govt/vt"
 	"fmt"
 	"io"
-	"http"
-	"govt.googlecode.com/hg/vt"
+	"net/http"
 )
 
 func (srv *Srv) statsRegister() {

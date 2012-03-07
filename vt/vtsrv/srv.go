@@ -5,22 +5,21 @@
 package vtsrv
 
 import (
+	"code.google.com/p/govt/vt"
 	"fmt"
 	"log"
 	"net"
-	"os"
 	"strings"
 	"sync"
-	"govt.googlecode.com/hg/vt"
 )
 
 const (
-	Cnew	= iota
+	Cnew = iota
 	Chello
 )
 
 const (
-	DbgPrintCalls	= 1 << iota
+	DbgPrintCalls = 1 << iota
 	DbgPrintPackets
 	DbgLogCalls
 	DbgLogPackets
@@ -63,48 +62,48 @@ type StatsOps interface {
 
 type Conn struct {
 	sync.Mutex
-	Srv		*Srv
-	Id		string
-	Debuglevel	int
-	status		int
-	conn		net.Conn
-	reqs		*Req
-	reqout		chan *Req
-	prev, next	*Conn
-	done		chan bool
+	Srv        *Srv
+	Id         string
+	Debuglevel int
+	status     int
+	conn       net.Conn
+	reqs       *Req
+	reqout     chan *Req
+	prev, next *Conn
+	done       chan bool
 
 	// stats
-	nreqs	int	// number of requests processed
-	tsz	uint64	// total size of the T messages received
-	rsz	uint64	// total size of the R messages sent
-	npend	int	// number of currently pending requests
-	maxpend	int	// maximum number of pending requests
-	nreads	int	// number of reads from the connection
-	nwrites	int	// number of writes to the connection
+	nreqs   int    // number of requests processed
+	tsz     uint64 // total size of the T messages received
+	rsz     uint64 // total size of the R messages sent
+	npend   int    // number of currently pending requests
+	maxpend int    // maximum number of pending requests
+	nreads  int    // number of reads from the connection
+	nwrites int    // number of writes to the connection
 }
 
 type Req struct {
-	Tc	*vt.Call
-	Rc	*vt.Call
-	Conn	*Conn
+	Tc   *vt.Call
+	Rc   *vt.Call
+	Conn *Conn
 }
 
 type Srv struct {
 	sync.Mutex
-	Id		string
-	Debuglevel	int
-	Log		*vt.Logger
-	ops		interface{}
-	connlist	*Conn
-	rchan		chan *Req
+	Id         string
+	Debuglevel int
+	Log        *vt.Logger
+	ops        interface{}
+	connlist   *Conn
+	rchan      chan *Req
 
 	// stats
-	nreqs	int	// number of requests processed
-	tsz	uint64	// total size of the T messages received
-	rsz	uint64	// total size of the R messages sent
-	maxpend	int	// maximum number of pending requests
-	nreads	int	// number of reads from the connection
-	nwrites	int	// number of writes to the connection
+	nreqs   int    // number of requests processed
+	tsz     uint64 // total size of the T messages received
+	rsz     uint64 // total size of the R messages sent
+	maxpend int    // maximum number of pending requests
+	nreads  int    // number of reads from the connection
+	nwrites int    // number of writes to the connection
 }
 
 func (srv *Srv) Start(ops interface{}) {
@@ -299,7 +298,7 @@ func (srv *Srv) NewConn(c net.Conn) {
 }
 
 func (conn *Conn) recv() {
-	var err os.Error
+	var err error
 	var n int
 
 	bufsz := 8 * vt.Maxblock
@@ -495,7 +494,7 @@ func (conn *Conn) logFcall(c *vt.Call) {
 	}
 }
 
-func StartListener(network, laddr string, srv *Srv) os.Error {
+func StartListener(network, laddr string, srv *Srv) error {
 	l, err := net.Listen(network, laddr)
 	if err != nil {
 		log.Println("listen fail: ", network, listen, err)

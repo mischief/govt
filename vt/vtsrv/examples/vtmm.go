@@ -7,23 +7,24 @@
 package main
 
 import (
+	"code.google.com/p/govt/vt"
+	"code.google.com/p/govt/vtsrv"
+	"crypto/sha1"
+	"errors"
 	"flag"
 	"fmt"
 	"hash"
-	"http"
-	"crypto/sha1"
+	"net/http"
 	"os"
 	"sync"
 	"syscall"
 	"time"
 	"unsafe"
-	"govt.googlecode.com/hg/vt"
-	"govt.googlecode.com/hg/vtsrv"
 )
 
 const (
 	Magic      = 0x28b4
-	HeaderSize = 8		// magic[2] size[2] next[4]
+	HeaderSize = 8 // magic[2] size[2] next[4]
 )
 
 type File struct {
@@ -32,7 +33,7 @@ type File struct {
 	size    uint64
 	synctip uint64
 	tip     uint64
-	lastip	uint64		// offset of the last block
+	lastip  uint64 // offset of the last block
 
 	chunksz uint64
 	chunks  [][]byte
@@ -51,7 +52,7 @@ var addr = flag.String("addr", ":17034", "network address")
 var debug = flag.Int("debug", 0, "print debug messages")
 var align = flag.Int("align", 0, "block alignment")
 
-func (srv *Vtmap) init(fname string) (err os.Error) {
+func (srv *Vtmap) init(fname string) (err error) {
 	err = nil
 	srv.htbl = make(map[string][]byte, 1<<12)
 	srv.schan = make(chan hash.Hash, 32)
@@ -64,9 +65,9 @@ func (srv *Vtmap) init(fname string) (err os.Error) {
 	return
 }
 
-func NewFile(fname string) (f *File, err os.Error) {
+func NewFile(fname string) (f *File, err error) {
 	var errno int
-	var fi *os.FileInfo
+	var fi os.FileInfo
 
 	f = new(File)
 	f.file, err = os.OpenFile(fname, os.O_RDWR, 0)
@@ -79,7 +80,7 @@ func NewFile(fname string) (f *File, err os.Error) {
 		return
 	}
 
-	f.size = uint64(fi.Size)
+	f.size = uint64(fi.Size())
 	f.chunksz = 1 * 1024 * 1024 * 1024 // 1GB
 	f.chunks = make([][]byte, f.size/f.chunksz+1)
 	fd := f.file.Fd()
@@ -104,7 +105,7 @@ func NewFile(fname string) (f *File, err os.Error) {
 	return f, nil
 }
 
-func (f *File) Sync() os.Error {
+func (f *File) Sync() error {
 	f.Lock()
 	offset := f.synctip
 	count := f.tip - f.synctip
@@ -113,7 +114,7 @@ func (f *File) Sync() os.Error {
 
 	for idx, off := int(offset/f.chunksz), int(offset%f.chunksz); count > 0; idx++ {
 		if idx > len(f.chunks) {
-			return os.NewError("invalid sync range")
+			return errors.New("invalid sync range")
 		}
 
 		buf := f.chunks[idx]
@@ -122,12 +123,12 @@ func (f *File) Sync() os.Error {
 			n = int(count)
 		}
 
-		start := uintptr(unsafe.Pointer(&buf[off])) &^ (0xfff)	// start address needs to be page-aligned
+		start := uintptr(unsafe.Pointer(&buf[off])) &^ (0xfff) // start address needs to be page-aligned
 		end := uintptr(unsafe.Pointer(&buf[off+n-1]))
 		_, _, e1 := syscall.Syscall(syscall.SYS_MSYNC, start, end-start, uintptr(syscall.MS_SYNC))
 		errno := int(e1)
 		if errno != 0 {
-			return os.NewError(syscall.Errstr(errno))
+			return errors.New(syscall.Errstr(errno))
 		}
 
 		count -= uint64(n)
@@ -138,7 +139,7 @@ func (f *File) Sync() os.Error {
 }
 
 // updates the tip
-func (f *File) ReadBlock() ([]byte, os.Error) {
+func (f *File) ReadBlock() ([]byte, error) {
 	var sz uint16
 	var next uint32
 
@@ -151,12 +152,12 @@ func (f *File) ReadBlock() ([]byte, os.Error) {
 	next, p = vt.Gint32(p)
 
 	if m != Magic {
-		if m==0 && sz==0 {
+		if m == 0 && sz == 0 {
 			// end of arena
 			return nil, nil
 		}
 
-		return nil, os.NewError("magic not found")
+		return nil, errors.New("magic not found")
 	}
 
 	f.lastip = f.tip
@@ -165,28 +166,28 @@ func (f *File) ReadBlock() ([]byte, os.Error) {
 	return p[0:sz], nil
 }
 
-func (f *File) WriteBlock(data []byte) (ndata []byte, err os.Error) {
+func (f *File) WriteBlock(data []byte) (ndata []byte, err error) {
 	blksz := HeaderSize + len(data)
 	idx := int(f.tip / f.chunksz)
 	off := int(f.tip % f.chunksz)
 	buf := f.chunks[idx]
-	if off + blksz >= len(buf) {
+	if off+blksz >= len(buf) {
 		idx++
 		if idx >= len(f.chunks) {
-			return nil, os.NewError("arena full")
+			return nil, errors.New("arena full")
 		}
 
 		off = 0
 		buf = f.chunks[idx]
 		f.tip = uint64(idx) * f.chunksz
 		if off+blksz >= len(buf) {
-			return nil, os.NewError("arena full")
+			return nil, errors.New("arena full")
 		}
 
 		// update the last block's next pointer
 		if f.lastip != ^uint64(0) {
-			b := f.chunks[f.lastip / f.chunksz]
-			_ = vt.Pint16(uint16(f.tip - f.lastip), b[(f.lastip%f.chunksz) + 4:])
+			b := f.chunks[f.lastip/f.chunksz]
+			_ = vt.Pint16(uint16(f.tip-f.lastip), b[(f.lastip%f.chunksz)+4:])
 			f.synctip = f.lastip
 		}
 	}
@@ -198,7 +199,7 @@ func (f *File) WriteBlock(data []byte) (ndata []byte, err os.Error) {
 
 	p := vt.Pint16(Magic, buf[off:])
 	p = vt.Pint16(uint16(len(data)), p)
-	p = vt.Pint32(uint32(nextoff - f.tip), p)
+	p = vt.Pint32(uint32(nextoff-f.tip), p)
 	copy(p, data)
 	f.lastip = f.tip
 	f.tip = nextoff
@@ -206,13 +207,13 @@ func (f *File) WriteBlock(data []byte) (ndata []byte, err os.Error) {
 	return p[0:len(data)], nil
 }
 
-func (srv *Vtmap) buildHash() os.Error {
+func (srv *Vtmap) buildHash() error {
 	nblk := 0
 	blksz := uint64(0)
-	stime := time.Nanoseconds()
+	stime := time.Now()
 	for {
 		blk, err := srv.f.ReadBlock()
-		if err!=nil {
+		if err != nil {
 			return err
 		}
 
@@ -225,10 +226,10 @@ func (srv *Vtmap) buildHash() os.Error {
 		nblk++
 		blksz += uint64(len(blk))
 	}
-	etime := time.Nanoseconds()
+	etime := time.Now()
 
 	srv.f.synctip = srv.f.tip
-	fmt.Printf("read %d blocks total %v bytes in %v ms\n", nblk, blksz, (etime - stime) / 1000000)
+	fmt.Printf("read %d blocks total %v bytes in %v ms\n", nblk, blksz, (etime.Sub(stime))/1000000)
 	fmt.Printf("total space used: %v bytes\n", srv.f.tip)
 	return nil
 }
@@ -244,7 +245,7 @@ func (srv *Vtmap) calcScore(data []byte) (ret vt.Score) {
 	}
 
 	s1.Write(data)
-	ret = s1.Sum()
+	ret = s1.Sum(nil)
 	select {
 	case srv.schan <- s1:
 		break
@@ -278,7 +279,7 @@ func (srv *Vtmap) Write(req *vtsrv.Req) {
 		block, err := srv.f.WriteBlock(req.Tc.Data)
 		if err != nil {
 			srv.Unlock()
-			req.RespondError(err.String())
+			req.RespondError(err.Error())
 			return
 		}
 

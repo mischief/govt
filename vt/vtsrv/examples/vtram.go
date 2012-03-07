@@ -5,28 +5,28 @@
 package main
 
 import (
+	"code.google.com/p/govt/vt"
+	"code.google.com/p/govt/vtsrv"
+	"crypto/sha1"
 	"flag"
 	"hash"
-	"http"
-	"crypto/sha1"
+	"net/http"
 	"sync"
-	"govt.googlecode.com/hg/vt"
-	"govt.googlecode.com/hg/vtsrv"
 )
 
 type Vtram struct {
 	vtsrv.Srv
 	sync.Mutex
-	htbl	map[int]*Block
-	schan	chan hash.Hash
+	htbl  map[int]*Block
+	schan chan hash.Hash
 }
 
 type Block struct {
-	btype	uint8
-	score	vt.Score
-	data	[]byte
+	btype uint8
+	score vt.Score
+	data  []byte
 
-	next	*Block
+	next *Block
 }
 
 var addr = flag.String("addr", ":17034", "network address")
@@ -52,7 +52,7 @@ func (srv *Vtram) calcScore(data []byte) (ret vt.Score) {
 	}
 
 	s1.Write(data)
-	ret = s1.Sum()
+	ret = s1.Sum(nil)
 	select {
 	case srv.schan <- s1:
 		break

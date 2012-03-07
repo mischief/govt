@@ -8,21 +8,21 @@
 package main
 
 import (
+	"code.google.com/p/govt/vt"
+	"code.google.com/p/govt/vtsrv"
+	"crypto/sha1"
 	"flag"
 	"fmt"
 	"hash"
-	"http"
-	"crypto/sha1"
 	"log"
+	"net/http"
 	"os"
-	"govt.googlecode.com/hg/vt"
-	"govt.googlecode.com/hg/vtsrv"
 )
 
 type Grande struct {
 	vtsrv.Srv
-	topDir	string
-	schan	chan hash.Hash
+	topDir string
+	schan  chan hash.Hash
 }
 
 var addr = flag.String("addr", ":17034", "network address")
@@ -59,7 +59,7 @@ func (srv *Grande) calcScore(data []byte) (ret vt.Score) {
 	}
 
 	s1.Write(data)
-	ret = s1.Sum()
+	ret = s1.Sum(nil)
 	select {
 	case srv.schan <- s1:
 		break
