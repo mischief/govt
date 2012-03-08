@@ -9,7 +9,7 @@ package main
 
 import (
 	"code.google.com/p/govt/vt"
-	"code.google.com/p/govt/vtsrv"
+	"code.google.com/p/govt/vt/vtsrv"
 	"crypto/sha1"
 	"flag"
 	"fmt"
@@ -78,7 +78,7 @@ func (srv *Grande) Read(req *vtsrv.Req) {
 	bname := srv.Name(req.Tc.Score)
 	f, err := os.Open(bname)
 	if err != nil {
-		req.RespondError(err.String())
+		req.RespondError(err.Error())
 		return
 	}
 
@@ -86,7 +86,7 @@ func (srv *Grande) Read(req *vtsrv.Req) {
 	n, err = f.Read(b)
 	f.Close()
 	if err != nil {
-		req.RespondError(err.String())
+		req.RespondError(err.Error())
 		return
 	}
 
@@ -101,20 +101,20 @@ func (srv *Grande) Write(req *vtsrv.Req) {
 	dname := fmt.Sprintf("%s/%02x/%02x", srv.topDir, s[0], s[1])
 	err := os.MkdirAll(dname, 0777)
 	if err != nil {
-		req.RespondError(err.String())
+		req.RespondError(err.Error())
 		return
 	}
 
 	f, err = os.OpenFile(srv.Name(s), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 	if err != nil {
-		req.RespondError(err.String())
+		req.RespondError(err.Error())
 		return
 	}
 
 	defer f.Close()
 	n, err = f.Write(req.Tc.Data)
 	if err != nil {
-		req.RespondError(err.String())
+		req.RespondError(err.Error())
 		return
 	}
 

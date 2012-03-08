@@ -8,7 +8,7 @@ package main
 
 import (
 	"code.google.com/p/govt/vt"
-	"code.google.com/p/govt/vtsrv"
+	"code.google.com/p/govt/vt/vtsrv"
 	"crypto/sha1"
 	"errors"
 	"flag"
@@ -66,7 +66,6 @@ func (srv *Vtmap) init(fname string) (err error) {
 }
 
 func NewFile(fname string) (f *File, err error) {
-	var errno int
 	var fi os.FileInfo
 
 	f = new(File)
@@ -90,9 +89,9 @@ func NewFile(fname string) (f *File, err error) {
 			n = uint64(f.size - offset)
 		}
 
-		f.chunks[i], errno = syscall.Mmap(fd, int64(offset), int(n), syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED)
-		if errno != 0 {
-			return nil, os.Errno(errno)
+		f.chunks[i], err = syscall.Mmap(int(fd), int64(offset), int(n), syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED)
+		if err != nil {
+			return nil, err
 		}
 
 		offset += uint64(n)
@@ -126,9 +125,8 @@ func (f *File) Sync() error {
 		start := uintptr(unsafe.Pointer(&buf[off])) &^ (0xfff) // start address needs to be page-aligned
 		end := uintptr(unsafe.Pointer(&buf[off+n-1]))
 		_, _, e1 := syscall.Syscall(syscall.SYS_MSYNC, start, end-start, uintptr(syscall.MS_SYNC))
-		errno := int(e1)
-		if errno != 0 {
-			return errors.New(syscall.Errstr(errno))
+		if e1 != 0 {
+			return e1
 		}
 
 		count -= uint64(n)

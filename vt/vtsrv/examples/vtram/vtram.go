@@ -6,7 +6,7 @@ package main
 
 import (
 	"code.google.com/p/govt/vt"
-	"code.google.com/p/govt/vtsrv"
+	"code.google.com/p/govt/vt/vtsrv"
 	"crypto/sha1"
 	"flag"
 	"hash"
