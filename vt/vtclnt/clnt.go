@@ -119,7 +119,7 @@ func (clnt *Clnt) recv() {
 
 		n, oserr := clnt.conn.Read(buf[pos:len(buf)])
 		if oserr != nil || n == 0 {
-			err = &vt.Error{oserr.String()}
+			err = &vt.Error{oserr.Error()}
 			goto closed
 		}
 
@@ -293,7 +293,7 @@ func (clnt *Clnt) send() {
 				n, err := clnt.conn.Write(b)
 				if err != nil {
 					clnt.Lock()
-					clnt.err = &vt.Error{err.String()}
+					clnt.err = &vt.Error{err.Error()}
 					clnt.Unlock()
 
 					/* just close the socket, will get signal on conn.done */
@@ -349,7 +349,7 @@ func NewClnt(c net.Conn) *Clnt {
 func Connect(ntype, addr string) (clnt *Clnt, err *vt.Error) {
 	c, e := net.Dial(ntype, addr)
 	if e != nil {
-		return nil, &vt.Error{e.String()}
+		return nil, &vt.Error{e.Error()}
 	}
 
 	clnt = NewClnt(c)
