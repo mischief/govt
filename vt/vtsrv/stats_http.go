@@ -156,7 +156,7 @@ func StatsHandler(c http.ResponseWriter, r *http.Request) {
 //
 // If StartStatsServer isn't called the interface is not initialized. The StartStatsServer
 // function can be called at any time. Information about the available servers is kept up-to-date.
-func StartStatsServer() {
+func (srv *Srv) StartStatsServer() {
         http.HandleFunc("/govt/", StatsHandler)
         go http.ListenAndServe(":6060", nil)
 }
