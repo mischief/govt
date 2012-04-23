@@ -8,14 +8,32 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sync"
 )
 
+var mux sync.RWMutex
+var stat map[string]http.Handler
+
+func register(s string, h http.Handler) {
+        mux.Lock()
+        if stat == nil {
+                stat = make(map[string]http.Handler)
+        }
+
+        if h == nil {
+                delete(stat, s)
+        } else {
+                stat[s] = h
+        }
+        mux.Unlock()
+}
+
 func (srv *Srv) statsRegister() {
-	http.Handle("/govt/srv/"+srv.Id, srv)
+	register("/govt/srv/"+srv.Id, srv)
 }
 
 func (srv *Srv) statsUnregister() {
-	http.Handle("/govt/srv/"+srv.Id, nil)
+	register("/govt/srv/"+srv.Id, nil)
 }
 
 func (srv *Srv) ServeHTTP(c http.ResponseWriter, r *http.Request) {
@@ -37,7 +55,7 @@ func (srv *Srv) ServeHTTP(c http.ResponseWriter, r *http.Request) {
 	nwrites := srv.nwrites
 
 	for conn := srv.connlist; conn != nil; conn = conn.next {
-		io.WriteString(c, fmt.Sprintf("<a href='/go9p/srv/%s/conn/%s'>%s</a><br>", srv.Id, conn.Id, conn.Id))
+		io.WriteString(c, fmt.Sprintf("<a href='/govt/srv/%s/conn/%s'>%s</a><br>", srv.Id, conn.Id, conn.Id))
 
 		conn.Lock()
 		nreqs += conn.nreqs
@@ -60,11 +78,11 @@ func (srv *Srv) ServeHTTP(c http.ResponseWriter, r *http.Request) {
 }
 
 func (conn *Conn) statsRegister() {
-	http.Handle("/govt/srv/"+conn.Srv.Id+"/conn/"+conn.Id, conn)
+	register("/govt/srv/"+conn.Srv.Id+"/conn/"+conn.Id, conn)
 }
 
 func (conn *Conn) statsUnregister() {
-	http.Handle("/govt/srv/"+conn.Srv.Id+"/conn/"+conn.Id, nil)
+	register("/govt/srv/"+conn.Srv.Id+"/conn/"+conn.Id, nil)
 }
 
 func (conn *Conn) ServeHTTP(c http.ResponseWriter, r *http.Request) {
@@ -115,4 +133,30 @@ func (conn *Conn) ServeHTTP(c http.ResponseWriter, r *http.Request) {
 			io.WriteString(c, fmt.Sprintf("<br id='fc%d'>%d: %s%s", i, i, vc, lbl))
 		}
 	}
+}
+
+func StatsHandler(c http.ResponseWriter, r *http.Request) {
+        mux.RLock()
+        if v, ok := stat[r.URL.Path]; ok {
+                v.ServeHTTP(c, r)
+        } else if r.URL.Path == "/govt/" {
+                io.WriteString(c, fmt.Sprintf("<html><body><br><h1>On offer: </h1><br>"))
+                for v := range stat {
+                        io.WriteString(c, fmt.Sprintf("<a href='%s'>%s</a><br>", v, v))
+                }
+                io.WriteString(c, "</body></html>")
+        }
+        mux.RUnlock()
+}
+
+// StartStatsServer initializes and starts an http server displaying useful debugging
+// information about the available servers, the clients connected to them and 
+// statistics about the data transferred on each connection. It listens by default on
+// port :6060 and serves subdirectories under /govt/
+//
+// If StartStatsServer isn't called the interface is not initialized. The StartStatsServer
+// function can be called at any time. Information about the available servers is kept up-to-date.
+func StartStatsServer() {
+        http.HandleFunc("/govt/", StatsHandler)
+        go http.ListenAndServe(":6060", nil)
 }

@@ -10,7 +10,6 @@ import (
 	"crypto/sha1"
 	"flag"
 	"hash"
-	"net/http"
 	"sync"
 )
 
@@ -139,6 +138,6 @@ func main() {
 	srv.init()
 	srv.Debuglevel = *debug
 	srv.Start(srv)
-	go http.ListenAndServe(":6060", nil)
+	srv.StartStatsServer()
 	vtsrv.StartListener("tcp", *addr, &srv.Srv)
 }

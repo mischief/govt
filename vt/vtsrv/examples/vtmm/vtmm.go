@@ -14,7 +14,6 @@ import (
 	"flag"
 	"fmt"
 	"hash"
-	"net/http"
 	"os"
 	"sync"
 	"syscall"
@@ -308,6 +307,6 @@ func main() {
 
 	srv.Debuglevel = *debug
 	srv.Start(srv)
-	go http.ListenAndServe(":6060", nil)
+	srv.StartStatsServer()
 	vtsrv.StartListener("tcp", *addr, &srv.Srv)
 }
