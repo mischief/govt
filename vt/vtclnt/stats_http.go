@@ -8,7 +8,25 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sync"
 )
+
+var mux sync.RWMutex
+var stat map[string]http.Handler
+
+func register(s string, h http.Handler) {
+        mux.Lock()
+        if stat == nil {
+                stat = make(map[string]http.Handler)
+        }
+
+        if h == nil {
+                delete(stat, s)
+        } else {
+                stat[s] = h
+        }
+        mux.Unlock()
+}
 
 func (clnt *Clnt) ServeHTTP(c http.ResponseWriter, r *http.Request) {
 	io.WriteString(c, fmt.Sprintf("<html><body><h1>Client %s</h1>", clnt.Id))
@@ -27,7 +45,7 @@ func (clnt *Clnt) ServeHTTP(c http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func clntServeHTTP(c http.ResponseWriter, r *http.Request) {
+func (clnts *ClntList) ServeHTTP(c http.ResponseWriter, r *http.Request) {
 	io.WriteString(c, fmt.Sprintf("<html><body>"))
 	defer io.WriteString(c, "</body></html>")
 
@@ -43,17 +61,17 @@ func clntServeHTTP(c http.ResponseWriter, r *http.Request) {
 }
 
 func (clnt *Clnt) statsRegister() {
-	http.Handle("/govt/clnt/"+clnt.Id, clnt)
+	register("/govt/clnt/"+clnt.Id, clnt)
 }
 
 func (clnt *Clnt) statsUnregister() {
-	http.Handle("/govt/clnt/"+clnt.Id, nil)
+	register("/govt/clnt/"+clnt.Id, nil)
 }
 
 func (c *ClntList) statsRegister() {
-	http.HandleFunc("/govt/clnt", clntServeHTTP)
+	register("/govt/clnt", c)
 }
 
 func (c *ClntList) statsUnregister() {
-	http.HandleFunc("/govt/clnt", clntServeHTTP)
+	register("/govt/clnt", nil)
 }
