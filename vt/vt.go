@@ -8,52 +8,52 @@ import "strings"
 
 // Venti messages
 const (
-	Rerror		= 1
-	Tping		= 2
-	Rping		= 3
-	Thello		= 4
-	Rhello		= 5
-	Tgoodbye	= 6
-	Tread		= 12
-	Rread		= 13
-	Twrite		= 14
-	Rwrite		= 15
-	Tsync		= 16
-	Rsync		= 17
+	Rerror   = 1
+	Tping    = 2
+	Rping    = 3
+	Thello   = 4
+	Rhello   = 5
+	Tgoodbye = 6
+	Tread    = 12
+	Rread    = 13
+	Twrite   = 14
+	Rwrite   = 15
+	Tsync    = 16
+	Rsync    = 17
 )
 
 // Other constants
 const (
-	Scoresize	= 20
-	Entrysize	= 40
-	Maxblock	= 56 * 1024
+	Scoresize = 20
+	Entrysize = 40
+	Maxblock  = 56 * 1024
 )
 
 // Block type
 const (
-	DataBlock	= 0 << 3
-	DirBlock	= 1 << 3
-	RBlock		= 2 << 3
+	DataBlock = 0 << 3
+	DirBlock  = 1 << 3
+	RBlock    = 2 << 3
 )
 
 type Call struct {
-	Id		byte
-	Tag		byte
-	Ename		string	// Rerror
-	Version		string	// Thello
-	Uid		string	// Thello
-	Strength	uint8	// Thello
-	Crypto		[]byte	// Thello
-	Codec		[]byte	// Thello
-	Sid		string	// Rhello
-	Rcrypto		byte	// Rhello
-	Rcodec		byte	// Rhello
-	Score		Score	// Tread, Rwrite
-	Btype		byte	// Tread, Rwrite
-	Count		uint16	// Tread
-	Data		[]byte	// Twrite, Rread
+	Id       byte
+	Tag      byte
+	Ename    string // Rerror
+	Version  string // Thello
+	Uid      string // Thello
+	Strength uint8  // Thello
+	Crypto   []byte // Thello
+	Codec    []byte // Thello
+	Sid      string // Rhello
+	Rcrypto  byte   // Rhello
+	Rcodec   byte   // Rhello
+	Score    Score  // Tread, Rwrite
+	Btype    byte   // Tread, Rwrite
+	Count    uint16 // Tread
+	Data     []byte // Twrite, Rread
 
-	Pkt	[]byte
+	Pkt []byte
 }
 
 type Score []byte
@@ -68,7 +68,7 @@ var Zeroscore = Score{
 
 var Banner string = "venti-02-govt\n"
 
-func Gint8(buf []byte) (uint8, []byte)	{ return buf[0], buf[1:len(buf)] }
+func Gint8(buf []byte) (uint8, []byte) { return buf[0], buf[1:len(buf)] }
 
 func Gint16(buf []byte) (uint16, []byte) {
 	return uint16(buf[1]) | (uint16(buf[0]) << 8), buf[2:len(buf)]
@@ -76,20 +76,20 @@ func Gint16(buf []byte) (uint16, []byte) {
 
 func Gint32(buf []byte) (uint32, []byte) {
 	return uint32(buf[3]) | (uint32(buf[2]) << 8) | (uint32(buf[1]) << 16) |
-		(uint32(buf[0]) << 24),
+			(uint32(buf[0]) << 24),
 		buf[4:len(buf)]
 }
 
 func Gint48(buf []byte) (uint64, []byte) {
 	return uint64(buf[5]) | (uint64(buf[4]) << 8) | (uint64(buf[3]) << 16) |
-		uint64(buf[2])<<24 | (uint64(buf[1]) << 32) | (uint64(buf[0]) << 40),
+			uint64(buf[2])<<24 | (uint64(buf[1]) << 32) | (uint64(buf[0]) << 40),
 		buf[6:len(buf)]
 }
 
 func Gint64(buf []byte) (uint64, []byte) {
 	return uint64(buf[7]) | (uint64(buf[6]) << 8) | (uint64(buf[5]) << 16) |
-		(uint64(buf[4]) << 24) | (uint64(buf[3]) << 32) | (uint64(buf[2]) << 40) |
-		(uint64(buf[1]) << 48) | (uint64(buf[0]) << 56),
+			(uint64(buf[4]) << 24) | (uint64(buf[3]) << 32) | (uint64(buf[2]) << 40) |
+			(uint64(buf[1]) << 48) | (uint64(buf[0]) << 56),
 		buf[8:len(buf)]
 }
 

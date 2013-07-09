@@ -279,7 +279,8 @@ func (clnt *Clnt) send() {
 
 				pos += n
 				nreqs++
-				clnt.ReqFree(req)
+				// req is freed in recv() if no Done channel was registered, or by the code calling <-Done.
+				//clnt.ReqFree(req)
 				select {
 				default:
 					req = nil
@@ -355,7 +356,7 @@ func Connect(ntype, addr string) (clnt *Clnt, err *vt.Error) {
 	clnt = NewClnt(c)
 	req := clnt.ReqAlloc()
 	req.Done = make(chan *Req)
-	tc := req.Tc
+	tc := &req.Tc
 	tc.Id = vt.Thello
 	tc.Version = "02"
 	tc.Uid = "anonymous"
@@ -411,7 +412,7 @@ func (clnt *Clnt) ReqFree(req *Req) {
 func (clnt *Clnt) Getnb(score vt.Score, btype uint8, count uint16, done chan *Req) (err *vt.Error) {
 	req := clnt.ReqAlloc()
 	req.Done = done
-	tc := req.Tc
+	tc := &req.Tc
 	tc.Id = vt.Tread
 	tc.Score = score
 	tc.Btype = btype
@@ -447,7 +448,7 @@ func (clnt *Clnt) Get(score vt.Score, btype uint8, count uint16) (data []byte, e
 // Put is always async, Sync will make sure all Puts finished before returning
 func (clnt *Clnt) Put(btype uint8, data []byte) (score vt.Score, err *vt.Error) {
 	req := clnt.ReqAlloc()
-	tc := req.Tc
+	tc := &req.Tc
 	tc.Id = vt.Twrite
 	tc.Btype = btype
 	tc.Data = data
@@ -466,7 +467,7 @@ func (clnt *Clnt) Sync() (err *vt.Error) {
 	done := make(chan *Req)
 	req := clnt.ReqAlloc()
 	req.Done = done
-	tc := req.Tc
+	tc := &req.Tc
 	tc.Id = vt.Tsync
 	err = clnt.Rpcnb(req)
 	if err != nil {

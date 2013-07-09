@@ -6,8 +6,10 @@ package vt
 
 //import "log"
 
+const VtCorruptType = 0xFF
+
 const (
-	Overrtype	= 0
+	Overrtype = iota
 	Ovroottype
 	Ovdirtype
 	Ovptype0
@@ -44,8 +46,8 @@ var todisk = [...]uint8{
 	Ovroottype,
 }
 
-var fromdisk = [...]int{
-	-1,
+var fromdisk = [...]uint8{
+	VtCorruptType,
 	RBlock,
 	DirBlock,
 	DirBlock + 1,
@@ -55,33 +57,33 @@ var fromdisk = [...]int{
 	DirBlock + 5,
 	DirBlock + 6,
 	DirBlock + 7,
-	-1,
-	-1,
-	-1,
+	VtCorruptType,
+	VtCorruptType,
+	VtCorruptType,
 	DataBlock,
 }
 
 var Epacket *Error = &Error{"invalid packet"}
 var Eblktype *Error = &Error{"invalid block type"}
 
-func fromDiskType(val uint8) int {
+func fromDiskType(val uint8) uint8 {
 	if int(val) > len(fromdisk) {
-		return -1
+		return VtCorruptType
 	}
 
 	return fromdisk[val]
 }
 
-func toDiskType(val uint8) int {
+func toDiskType(val uint8) uint8 {
 	if int(val) > len(todisk) {
-		return -1
+		return VtCorruptType
 	}
 
-	return int(todisk[val])
+	return todisk[val]
 }
 
 func PackCall(buf []byte, id uint8, tag uint8, size int) (int, []byte) {
-	size += 2 + 1 + 1	// size[2] id[1] tag[1]
+	size += 2 + 1 + 1 // size[2] id[1] tag[1]
 	if len(buf) < size {
 		return -1, nil
 	}
@@ -108,7 +110,7 @@ func PackTping(buf []byte, tag uint8) int {
 
 func PackThello(buf []byte, tag uint8, version, uid string, strength uint8, crypto, codec []byte) int {
 	sz, buf := PackCall(buf, Thello, tag,
-		7+len(version)+len(uid)+len(crypto)+len(codec))	// vesion[s] uid[s] strength[1] crypto[n] codec[n]
+		7+len(version)+len(uid)+len(crypto)+len(codec)) // vesion[s] uid[s] strength[1] crypto[n] codec[n]
 	if buf == nil {
 		return -1
 	}
@@ -127,13 +129,13 @@ func PackTgoodbye(buf []byte, tag uint8) int {
 }
 
 func PackTread(buf []byte, tag uint8, score Score, btype uint8, count uint16) int {
-	sz, buf := PackCall(buf, Tread, tag, Scoresize+1+1+2)	// score[20] type[1] pad[1] count[2]
+	sz, buf := PackCall(buf, Tread, tag, Scoresize+1+1+2) // score[20] type[1] pad[1] count[2]
 	if buf == nil {
 		return -1
 	}
 
 	buf = Pscore(score, buf)
-	buf = Pint8(uint8(toDiskType(btype)), buf)
+	buf = Pint8(toDiskType(btype), buf)
 	buf = Pint8(0, buf)
 	Pint16(count, buf)
 
@@ -141,12 +143,12 @@ func PackTread(buf []byte, tag uint8, score Score, btype uint8, count uint16) in
 }
 
 func PackTwrite(buf []byte, tag uint8, btype uint8, data []byte) int {
-	sz, buf := PackCall(buf, Twrite, tag, 1+3+len(data))	// type[1] pad[3] data
+	sz, buf := PackCall(buf, Twrite, tag, 1+3+len(data)) // type[1] pad[3] data
 	if buf == nil {
 		return -1
 	}
 
-	buf = Pint8(uint8(toDiskType(btype)), buf)
+	buf = Pint8(toDiskType(btype), buf)
 	buf = Pint8(0, buf)
 	buf = Pint16(0, buf)
 	copy(buf, data)

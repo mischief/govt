@@ -15,17 +15,17 @@ var mux sync.RWMutex
 var stat map[string]http.Handler
 
 func register(s string, h http.Handler) {
-        mux.Lock()
-        if stat == nil {
-                stat = make(map[string]http.Handler)
-        }
+	mux.Lock()
+	if stat == nil {
+		stat = make(map[string]http.Handler)
+	}
 
-        if h == nil {
-                delete(stat, s)
-        } else {
-                stat[s] = h
-        }
-        mux.Unlock()
+	if h == nil {
+		delete(stat, s)
+	} else {
+		stat[s] = h
+	}
+	mux.Unlock()
 }
 
 func (srv *Srv) statsRegister() {
@@ -136,27 +136,27 @@ func (conn *Conn) ServeHTTP(c http.ResponseWriter, r *http.Request) {
 }
 
 func StatsHandler(c http.ResponseWriter, r *http.Request) {
-        mux.RLock()
-        if v, ok := stat[r.URL.Path]; ok {
-                v.ServeHTTP(c, r)
-        } else if r.URL.Path == "/govt/" {
-                io.WriteString(c, fmt.Sprintf("<html><body><br><h1>On offer: </h1><br>"))
-                for v := range stat {
-                        io.WriteString(c, fmt.Sprintf("<a href='%s'>%s</a><br>", v, v))
-                }
-                io.WriteString(c, "</body></html>")
-        }
-        mux.RUnlock()
+	mux.RLock()
+	if v, ok := stat[r.URL.Path]; ok {
+		v.ServeHTTP(c, r)
+	} else if r.URL.Path == "/govt/" {
+		io.WriteString(c, fmt.Sprintf("<html><body><br><h1>On offer: </h1><br>"))
+		for v := range stat {
+			io.WriteString(c, fmt.Sprintf("<a href='%s'>%s</a><br>", v, v))
+		}
+		io.WriteString(c, "</body></html>")
+	}
+	mux.RUnlock()
 }
 
 // StartStatsServer initializes and starts an http server displaying useful debugging
-// information about the available servers, the clients connected to them and 
+// information about the available servers, the clients connected to them and
 // statistics about the data transferred on each connection. It listens by default on
 // port :6060 and serves subdirectories under /govt/
 //
 // If StartStatsServer isn't called the interface is not initialized. The StartStatsServer
 // function can be called at any time. Information about the available servers is kept up-to-date.
 func (srv *Srv) StartStatsServer() {
-        http.HandleFunc("/govt/", StatsHandler)
-        go http.ListenAndServe(":6060", nil)
+	http.HandleFunc("/govt/", StatsHandler)
+	go http.ListenAndServe(":6060", nil)
 }

@@ -15,17 +15,17 @@ var mux sync.RWMutex
 var stat map[string]http.Handler
 
 func register(s string, h http.Handler) {
-        mux.Lock()
-        if stat == nil {
-                stat = make(map[string]http.Handler)
-        }
+	mux.Lock()
+	if stat == nil {
+		stat = make(map[string]http.Handler)
+	}
 
-        if h == nil {
-                delete(stat, s)
-        } else {
-                stat[s] = h
-        }
-        mux.Unlock()
+	if h == nil {
+		delete(stat, s)
+	} else {
+		stat[s] = h
+	}
+	mux.Unlock()
 }
 
 func (clnt *Clnt) ServeHTTP(c http.ResponseWriter, r *http.Request) {
