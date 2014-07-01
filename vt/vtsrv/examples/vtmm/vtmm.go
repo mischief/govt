@@ -184,7 +184,7 @@ func (f *File) WriteBlock(data []byte) (ndata []byte, err error) {
 		// update the last block's next pointer
 		if f.lastip != ^uint64(0) {
 			b := f.chunks[f.lastip/f.chunksz]
-			_ = vt.Pint16(uint16(f.tip-f.lastip), b[(f.lastip%f.chunksz)+4:])
+			_ = vt.Pint32(uint32(f.tip-f.lastip), b[(f.lastip%f.chunksz)+4:])
 			f.synctip = f.lastip
 		}
 	}
