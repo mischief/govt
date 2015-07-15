@@ -81,7 +81,7 @@ var clnts *ClntList
 var DefaultDebuglevel int
 var DefaultLogger *vt.Logger
 
-func (clnt *Clnt) Rpcnb(r *Req) *vt.Error {
+func (clnt *Clnt) Rpcnb(r *Req) error {
 	clnt.Lock()
 	if clnt.err != nil {
 		clnt.Unlock()
@@ -348,7 +348,7 @@ func NewClnt(c net.Conn) *Clnt {
 	return clnt
 }
 
-func Connect(ntype, addr string) (clnt *Clnt, err *vt.Error) {
+func Connect(ntype, addr string) (clnt *Clnt, err error) {
 	c, e := net.Dial(ntype, addr)
 	if e != nil {
 		return nil, &vt.Error{e.Error()}
@@ -410,7 +410,7 @@ func (clnt *Clnt) ReqFree(req *Req) {
 	}
 }
 
-func (clnt *Clnt) Getnb(score vt.Score, btype uint8, count uint16, done chan *Req) (err *vt.Error) {
+func (clnt *Clnt) Getnb(score vt.Score, btype uint8, count uint16, done chan *Req) (err error) {
 	req := clnt.ReqAlloc()
 	req.Done = done
 	tc := &req.Tc
@@ -427,7 +427,7 @@ func (clnt *Clnt) Getnb(score vt.Score, btype uint8, count uint16, done chan *Re
 	return
 }
 
-func (clnt *Clnt) Get(score vt.Score, btype uint8, count uint16) (data []byte, err *vt.Error) {
+func (clnt *Clnt) Get(score vt.Score, btype uint8, count uint16) (data []byte, err error) {
 	done := make(chan *Req)
 	err = clnt.Getnb(score, btype, count, done)
 	if err != nil {
@@ -447,7 +447,7 @@ func (clnt *Clnt) Get(score vt.Score, btype uint8, count uint16) (data []byte, e
 }
 
 // Put is always async, Sync will make sure all Puts finished before returning
-func (clnt *Clnt) Put(btype uint8, data []byte) (score vt.Score, err *vt.Error) {
+func (clnt *Clnt) Put(btype uint8, data []byte) (score vt.Score, err error) {
 	req := clnt.ReqAlloc()
 	tc := &req.Tc
 	tc.Id = vt.Twrite
@@ -464,7 +464,7 @@ func (clnt *Clnt) Put(btype uint8, data []byte) (score vt.Score, err *vt.Error) 
 	return
 }
 
-func (clnt *Clnt) Sync() (err *vt.Error) {
+func (clnt *Clnt) Sync() (err error) {
 	done := make(chan *Req)
 	req := clnt.ReqAlloc()
 	req.Done = done

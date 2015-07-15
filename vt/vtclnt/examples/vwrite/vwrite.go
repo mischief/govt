@@ -38,13 +38,13 @@ func main() {
 	}
 	clnt, e := vtclnt.Connect("tcp", *host)
 	if e != nil {
-		fmt.Fprintf(os.Stderr, "vtconnect: %s\n", e.Ename)
+		fmt.Fprintf(os.Stderr, "vtconnect: %s\n", e)
 		return
 	}
 	clnt.Debuglevel = *debug
 	score, e := clnt.Put(uint8(*vtype), p)
 	if e != nil {
-		fmt.Fprintf(os.Stderr, "vtwrite: %s\n", e.Ename)
+		fmt.Fprintf(os.Stderr, "vtwrite: %s\n", e)
 		return
 	}
 	clnt.Sync()
