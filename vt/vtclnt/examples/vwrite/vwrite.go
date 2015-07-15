@@ -6,11 +6,12 @@ package main
 
 import (
 	"bufio"
-	"code.google.com/p/govt/vt"
-	"code.google.com/p/govt/vt/vtclnt"
 	"flag"
 	"fmt"
 	"os"
+
+	"github.com/mischief/govt/vt"
+	"github.com/mischief/govt/vt/vtclnt"
 )
 
 var host = flag.String("host", os.Getenv("venti"), "server address")
@@ -40,7 +41,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "vtconnect: %s\n", e.Ename)
 		return
 	}
-        clnt.Debuglevel = *debug
+	clnt.Debuglevel = *debug
 	score, e := clnt.Put(uint8(*vtype), p)
 	if e != nil {
 		fmt.Fprintf(os.Stderr, "vtwrite: %s\n", e.Ename)

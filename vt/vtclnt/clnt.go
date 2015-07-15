@@ -5,13 +5,14 @@
 package vtclnt
 
 import (
-	"code.google.com/p/govt/vt"
 	"crypto/sha1"
 	"fmt"
 	"hash"
 	"log"
 	"net"
 	"sync"
+
+	"github.com/mischief/govt/vt"
 )
 
 const (

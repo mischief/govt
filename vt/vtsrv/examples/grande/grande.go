@@ -8,14 +8,15 @@
 package main
 
 import (
-	"code.google.com/p/govt/vt"
-	"code.google.com/p/govt/vt/vtsrv"
 	"crypto/sha1"
 	"flag"
 	"fmt"
 	"hash"
 	"log"
 	"os"
+
+	"github.com/mischief/govt/vt"
+	"github.com/mischief/govt/vt/vtsrv"
 )
 
 type Grande struct {

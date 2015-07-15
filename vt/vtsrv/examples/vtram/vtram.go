@@ -5,12 +5,13 @@
 package main
 
 import (
-	"code.google.com/p/govt/vt"
-	"code.google.com/p/govt/vt/vtsrv"
 	"crypto/sha1"
 	"flag"
 	"hash"
 	"sync"
+
+	"github.com/mischief/govt/vt"
+	"github.com/mischief/govt/vt/vtsrv"
 )
 
 type Vtram struct {

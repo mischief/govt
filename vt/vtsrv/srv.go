@@ -5,12 +5,13 @@
 package vtsrv
 
 import (
-	"code.google.com/p/govt/vt"
 	"fmt"
 	"log"
 	"net"
 	"strings"
 	"sync"
+
+	"github.com/mischief/govt/vt"
 )
 
 const (

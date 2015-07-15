@@ -4,11 +4,12 @@
 package vtsrv
 
 import (
-	"code.google.com/p/govt/vt"
 	"fmt"
 	"io"
 	"net/http"
 	"sync"
+
+	"github.com/mischief/govt/vt"
 )
 
 var mux sync.RWMutex
