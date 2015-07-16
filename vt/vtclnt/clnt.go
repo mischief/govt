@@ -33,16 +33,15 @@ type Clnt struct {
 	Id         string
 	Log        *vt.Logger
 
-	conn       net.Conn
-	tagpool    *pool
-	reqout     chan *Req
-	done       chan bool
-	reqfirst   *Req
-	reqlast    *Req
-	err        *vt.Error
-	reqchan    chan *Req
-	schan      chan hash.Hash
-	next, prev *Clnt
+	conn     net.Conn
+	tagpool  *pool
+	reqout   chan *Req
+	done     chan bool
+	reqfirst *Req
+	reqlast  *Req
+	err      *vt.Error
+	reqchan  chan *Req
+	schan    chan hash.Hash
 
 	// stats
 	nreqs   int    // number of requests processed
@@ -72,12 +71,6 @@ type pool struct {
 	imap  []byte
 }
 
-type ClntList struct {
-	sync.Mutex
-	list *Clnt
-}
-
-var clnts *ClntList
 var DefaultDebuglevel int
 var DefaultLogger *vt.Logger
 
@@ -231,18 +224,6 @@ closed:
 		}
 	}
 
-	clnts.Lock()
-	if clnt == clnts.list {
-		clnts.list = clnt.next
-	} else {
-		var c *Clnt
-
-		for c = clnts.list; c.next != clnt; c = c.next {
-		}
-
-		c.next = clnt.next
-	}
-	clnts.Unlock()
 	if sop, ok := (interface{}(clnt)).(StatsOps); ok {
 		sop.statsUnregister()
 	}
@@ -336,11 +317,6 @@ func NewClnt(c net.Conn) *Clnt {
 	processBanner(c)
 	go clnt.recv()
 	go clnt.send()
-
-	clnts.Lock()
-	clnt.next = clnts.list
-	clnts.list = clnt
-	clnts.Unlock()
 
 	if sop, ok := (interface{}(clnt)).(StatsOps); ok {
 		sop.statsRegister()
@@ -557,11 +533,4 @@ func processBanner(c net.Conn) bool {
 	}
 
 	return vt.CheckBanner(string(buf[0:i]))
-}
-
-func init() {
-	clnts = new(ClntList)
-	if sop, ok := (interface{}(clnts)).(StatsOps); ok {
-		sop.statsRegister()
-	}
 }
