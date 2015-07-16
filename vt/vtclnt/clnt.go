@@ -193,7 +193,7 @@ func (clnt *Clnt) recv() {
 				if req.Rc.Id != vt.Rerror {
 					req.Err = &vt.Error{"invalid response"}
 				} else {
-					if req.Err != nil {
+					if req.Err == nil {
 						req.Err = &vt.Error{req.Rc.Ename}
 					}
 				}
